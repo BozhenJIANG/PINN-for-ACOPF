@@ -17,7 +17,7 @@ Due to GitHub's 25 MB file size limit, the dataset is not included in this repos
 
 ## Simplified Implementation
 
-For educational clarity, we have intentionally simplified the network architecture and training procedure. The code does **not** employ tensor computation optimizations, making the gradient calculation process more transparent and easier to follow for readers.
+For clarity, we have intentionally simplified the network architecture and training procedure. The code does **not** employ tensor computation optimizations, making the gradient calculation process more transparent and easier to follow for readers.
 
 ## Requirements
 
