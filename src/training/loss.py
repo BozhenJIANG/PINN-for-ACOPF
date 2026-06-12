@@ -34,22 +34,6 @@ def compute_loss(model, x, y, other_variable, epoch, pre_train_epoch,
         q_u_delta = model.pinn_pf(x, y)
         q_u_delta_loss = torch.mean((q_u_delta - other_variable)**2)
 
-        # temp_p, temp_q = power_flow_equations_evaluation(case1354,  y.detach().cpu().numpy()[0, :], x_.detach().cpu().numpy()[0, :], (model.pinn_pf(x_, y)[0, :]).detach().cpu().numpy())
-
-        # print("training data power flow: ", temp_p, temp_q)
-
-
-        
-
-        # temp_p, temp_q = power_flow_equations_evaluation(case1354,  y.cpu().numpy()[0, :], x.cpu().numpy()[0, :], other_variable[0, :].cpu().numpy())
-
-        # print("training data power flow: ", temp_p, temp_q)
-        # training data power flow:  7.463407e-05 0.00017600207
-        # training data power flow:  7.473792e-05 0.00016742705
-        # training data power flow:  0.000106489955 0.00019836152
-        # training data power flow:  7.6228585e-05 0.00018128102
-        # training data power flow:  5.541769e-05 0.00014896343
-
         return (xent_loss, q_u_delta_loss)
     else:
         # Physics-informed training (main training or unlabeled fine-tuning)
