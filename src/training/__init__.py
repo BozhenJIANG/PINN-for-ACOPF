@@ -8,6 +8,6 @@ from .evaluator import validate_model, print_evaluation_results, run_power_flow_
 __all__ = [
     'compute_loss',
     'train_step_0', 'train_step_1_1', 'train_step_1_2', 'train_step_2',
-    'validate_model', 'evaluate_models', 'print_evaluation_results',
+    'validate_model', 'print_evaluation_results',
     'run_power_flow_pypower'
 ]
