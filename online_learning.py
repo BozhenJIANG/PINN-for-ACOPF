@@ -5,7 +5,7 @@ Online Learning Framework for ACOPF with Data Shift.
 Only for small load distribution and topology change scenarios
 
 This script implements:
-1. Pre-training on labeled data (1000 samples)
+1. Pre-training on labeled data
 2. Online fine-tuning on unlabeled data with physics constraints
 3. Evaluation on labeled test data for both load and topology variations
 """
