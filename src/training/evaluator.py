@@ -62,17 +62,6 @@ def run_power_flow_pypower(case1354, state, action):
     num_buses = bus_data.shape[0]
     num_gens = gen_data.shape[0]
 
-    # # ------------------------------------------------------------------
-    # # Clip action to valid physical bounds BEFORE passing to pypower.
-    # # Prevents V/|V| division-by-zero and singular Jacobian when the
-    # # model output is outside the feasible region (e.g. early training).
-    # # ------------------------------------------------------------------
-    # action = action.copy()
-    # p_min = gen_data[:, 9] / 100.0
-    # p_max = gen_data[:, 8] / 100.0
-    # action[:num_gens]  = np.clip(action[:num_gens],  p_min, p_max)
-    # action[num_gens:]  = np.clip(action[num_gens:],  0.90,  1.10)
-
     # Update load data (Pd, Qd) - state is normalized, needs *100
     for i in range(num_buses):
         bus_data[i, 2] = state[i] * 100  # Pd
