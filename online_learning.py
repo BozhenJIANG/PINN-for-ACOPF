@@ -155,25 +155,6 @@ def pretrain_model(model, train_loader, X_con_val_tensor, args, device, case, lo
             total_loss  += losses[0].item()
             batch_count += 1
 
-        # # for test
-        # for batch_idx, (train_x, train_y, other_variable) in enumerate(train_loader):
-        #     print(train_x.shape[0])
-        #     temp_p_, temp_q_ = 0, 0
-        #     for i in range(train_x.shape[0]):
-
-
-        #         temp_p, temp_q = power_flow_equations_evaluation(case,  train_x.cpu().numpy()[i, :], train_y.cpu().numpy()[i, :], other_variable[i, :].cpu().numpy())
-
-        #         temp_p_ += np.sqrt(temp_p)
-        #         temp_q_ += np.sqrt(temp_q)
-
-        #     break
-        # print("training data power flow: ", temp_p_/train_x.shape[0],temp_q_/train_x.shape[0])
-        # # 128
-        # # training data power flow:  0.008188682 0.012491809
-
-        # print(losses[0]," ",losses[1])
-
         avg_loss = total_loss / batch_count if batch_count > 0 else 0
 
         # Intermediate validation on training set
