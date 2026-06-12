@@ -40,28 +40,6 @@ def update_learning_rate(optimizer, epoch, initial_lr=5e-5):
         new_lr = initial_lr * 0.001
     elif epoch < 1001:
         new_lr = initial_lr * 0.0005
-    # elif epoch < 1400:
-    #     new_lr = initial_lr * 0.005
-    # elif epoch < 1800:
-    #     new_lr = initial_lr * 0.001
-    # elif epoch < 2000:
-    #     new_lr = initial_lr * 0.0005
-    # elif epoch < 2500:
-    #     new_lr = initial_lr * 0.0001
-    # else:
-    #     new_lr = initial_lr * 0.00001
-
-    # elif epoch < 1400:
-    #     new_lr = initial_lr * 0.0005
-    # elif epoch < 1800:
-    #     new_lr = initial_lr * 0.0001
-    # elif epoch < 2000:
-    #     new_lr = initial_lr * 0.00005
-    # elif epoch < 2500:
-    #     new_lr = initial_lr * 0.00001
-    # else:
-    #     new_lr = initial_lr * 0.000001    
-
     elif epoch < 1400:
         new_lr = initial_lr * 0.05
     elif epoch < 1800:
