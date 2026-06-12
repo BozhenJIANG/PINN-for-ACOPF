@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Online Learning Framework for ACOPF with Distribution Shift.
+Online Learning Framework for ACOPF with Data Shift.
 
 Only for small load distribution and topology change scenarios
 
@@ -207,161 +207,161 @@ def pretrain_model(model, train_loader, X_con_val_tensor, args, device, case, lo
     return model
 
 
-# def finetune_model(model, finetune_data, args, device, case, logger):
-#     """Fine-tune model using a mix of labeled (supervised) and unlabeled (physics) data.
+def finetune_model(model, finetune_data, args, device, case, logger):
+    """Fine-tune model using a mix of labeled (supervised) and unlabeled (physics) data.
 
-#     finetune_data : dict with keys X_con, X_in, X_other for all N (2000) samples.
+    finetune_data : dict with keys X_con, X_in, X_other for all N (2000) samples.
 
-#     Splitting controlled by args.finetune_label_ratio  (p):
-#       - first  int(p * N) samples → supervised   via train_step_0 (labeled)
-#       - last (1-p)*N samples      → unsupervised via train_step_1_1 + train_step_2
+    Splitting controlled by args.finetune_label_ratio  (p):
+      - first  int(p * N) samples → supervised   via train_step_0 (labeled)
+      - last (1-p)*N samples      → unsupervised via train_step_1_1 + train_step_2
 
-#     p = 0.0 (default) → fully unsupervised (original behaviour)
-#     """
-#     logger.info("="*80)
-#     logger.info("Phase 2: Fine-tuning on unlabeled data")
-#     logger.info("="*80)
+    p = 0.0 (default) → fully unsupervised (original behaviour)
+    """
+    logger.info("="*80)
+    logger.info("Phase 2: Fine-tuning on unlabeled data")
+    logger.info("="*80)
 
-#     X_con_ft   = finetune_data['X_con']
-#     X_in_ft    = finetune_data['X_in']
-#     X_other_ft = finetune_data['X_other']
-#     N = X_con_ft.shape[0]   # typically 2000
+    X_con_ft   = finetune_data['X_con']
+    X_in_ft    = finetune_data['X_in']
+    X_other_ft = finetune_data['X_other']
+    N = X_con_ft.shape[0]   # typically 2000
 
-#     p           = args.finetune_label_ratio
-#     n_labeled   = max(0, min(N, int(p * N)))
-#     n_unlabeled = N - n_labeled
-#     logger.info(f"  Finetune split: {n_labeled} labeled ({p*100:.1f}%) "
-#                 f"+ {n_unlabeled} unlabeled ({(1-p)*100:.1f}%)")
+    p           = args.finetune_label_ratio
+    n_labeled   = max(0, min(N, int(p * N)))
+    n_unlabeled = N - n_labeled
+    logger.info(f"  Finetune split: {n_labeled} labeled ({p*100:.1f}%) "
+                f"+ {n_unlabeled} unlabeled ({(1-p)*100:.1f}%)")
 
-#     # Labeled loader  (X_con, X_in, X_other) — for supervised train_step_0
-#     labeled_loader = None
-#     if n_labeled > 0:
-#         labeled_loader = create_dataloaders(
-#             X_con_ft[:n_labeled], X_in_ft[:n_labeled], X_other_ft[:n_labeled],
-#             batch_size=args.batch_size, shuffle=True
-#         )
+    # Labeled loader  (X_con, X_in, X_other) — for supervised train_step_0
+    labeled_loader = None
+    if n_labeled > 0:
+        labeled_loader = create_dataloaders(
+            X_con_ft[:n_labeled], X_in_ft[:n_labeled], X_other_ft[:n_labeled],
+            batch_size=args.batch_size, shuffle=True
+        )
 
-#     # Unlabeled loader (X_con only) — for physics-informed train_step_1_1 + train_step_2
-#     unlabeled_loader = None
-#     if n_unlabeled > 0:
-#         unlabeled_loader = create_dataloaders(
-#             X_con_ft[n_labeled:],
-#             batch_size=args.batch_size, shuffle=True
-#         )
+    # Unlabeled loader (X_con only) — for physics-informed train_step_1_1 + train_step_2
+    unlabeled_loader = None
+    if n_unlabeled > 0:
+        unlabeled_loader = create_dataloaders(
+            X_con_ft[n_labeled:],
+            batch_size=args.batch_size, shuffle=True
+        )
 
-#     # Build a small validation tensor from finetune data (always available)
-#     val_tensor = torch.tensor(
-#         X_con_ft[:args.sample_num_for_validate], dtype=torch.float32
-#     )
+    # Build a small validation tensor from finetune data (always available)
+    val_tensor = torch.tensor(
+        X_con_ft[:args.sample_num_for_validate], dtype=torch.float32
+    )
 
-#     optimizer = optim.Adam(
-#         model.parameters(),
-#         lr=args.lr, betas=tuple(args.betas)
-#     )
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=args.lr, betas=tuple(args.betas)
+    )
 
-#     best_p_error = float('inf')
-#     # pseudo_epoch ensures loss.py always enters the physics branch
-#     # AND drives the LR schedule to continue from where pretrain left off
-#     pseudo_epoch_base = args.pretrain_epochs
+    best_p_error = float('inf')
+    # pseudo_epoch ensures loss.py always enters the physics branch
+    # AND drives the LR schedule to continue from where pretrain left off
+    pseudo_epoch_base = args.pretrain_epochs
 
-#     tqdm_e = tqdm(range(1, args.finetune_epochs + 1), desc='Fine-tuning', leave=True)
-#     for epoch in tqdm_e:
-#         model.train()
-#         total_loss  = 0
-#         batch_count = 0
-#         pseudo_epoch = pseudo_epoch_base + epoch
-#         penalty_coefficient = args.penalty_coefficient
+    tqdm_e = tqdm(range(1, args.finetune_epochs + 1), desc='Fine-tuning', leave=True)
+    for epoch in tqdm_e:
+        model.train()
+        total_loss  = 0
+        batch_count = 0
+        pseudo_epoch = pseudo_epoch_base + epoch
+        penalty_coefficient = args.penalty_coefficient
 
-#         # Update LR using pseudo_epoch so schedule continues from pretrain end
-#         new_lr = update_learning_rate(optimizer, pseudo_epoch, args.lr)
+        # Update LR using pseudo_epoch so schedule continues from pretrain end
+        new_lr = update_learning_rate(optimizer, pseudo_epoch, args.lr)
         
-#         # ---- Step 0: supervised fine-tuning on labeled subset ----
-#         if labeled_loader is not None:
+        # ---- Step 0: supervised fine-tuning on labeled subset ----
+        if labeled_loader is not None:
             
-#             for batch_idx, (lx, ly, lo) in enumerate(labeled_loader):
-#                 # if batch_idx >= 4 * args.step_pretrain_batches:
-#                 if batch_idx >= args.step_pretrain_batches:
-#                     break
-#                 lx = lx.to(device)
-#                 ly = ly.to(device)
-#                 lo = lo.to(device)
-#                 losses = train_step_0(
-#                     model, ly, lx, lo,
-#                     optimizer, pseudo_epoch, args.pretrain_epochs,
-#                     penalty_coefficient, case
-#                 )
-#                 total_loss  += losses[0].item()
-#                 batch_count += 1             
+            for batch_idx, (lx, ly, lo) in enumerate(labeled_loader):
+                # if batch_idx >= 4 * args.step_pretrain_batches:
+                if batch_idx >= args.step_pretrain_batches:
+                    break
+                lx = lx.to(device)
+                ly = ly.to(device)
+                lo = lo.to(device)
+                losses = train_step_0(
+                    model, ly, lx, lo,
+                    optimizer, pseudo_epoch, args.pretrain_epochs,
+                    penalty_coefficient, case
+                )
+                total_loss  += losses[0].item()
+                batch_count += 1             
 
-#         # ---- Step 1.1: PINN_PF on unlabeled subset ----
-#         if unlabeled_loader is not None:
+        # ---- Step 1.1: PINN_PF on unlabeled subset ----
+        if unlabeled_loader is not None:
 
-#             for batch_idx, (unlabeled_x,) in enumerate(unlabeled_loader):
-#                 if batch_idx >= args.step_pinn_batches:
-#                     break
-#                 unlabeled_x = unlabeled_x.to(device)
-#                 with torch.no_grad():
-#                     pseudo_action = model.encode(unlabeled_x)
-#                 losses = train_step_1_1(
-#                     model, pseudo_action, unlabeled_x, None,
-#                     optimizer, pseudo_epoch, args.pretrain_epochs,
-#                     penalty_coefficient, case,
-#                     args.w_p_balance, args.w_q_balance, args.w_theta_balance
-#                 )
-#                 total_loss  += losses[0].item()
-#                 batch_count += 1
+            for batch_idx, (unlabeled_x,) in enumerate(unlabeled_loader):
+                if batch_idx >= args.step_pinn_batches:
+                    break
+                unlabeled_x = unlabeled_x.to(device)
+                with torch.no_grad():
+                    pseudo_action = model.encode(unlabeled_x)
+                losses = train_step_1_1(
+                    model, pseudo_action, unlabeled_x, None,
+                    optimizer, pseudo_epoch, args.pretrain_epochs,
+                    penalty_coefficient, case,
+                    args.w_p_balance, args.w_q_balance, args.w_theta_balance
+                )
+                total_loss  += losses[0].item()
+                batch_count += 1
 
-#         # ---- Step 2: encoder constraints on unlabeled subset ----
-#         if unlabeled_loader is not None:
-#             # Freeze PINN_PF parameters so only encoder gets updated
-#             for param in model.pinn_pf_.parameters():
-#                 param.requires_grad = False
-#             for batch_idx, (unlabeled_x,) in enumerate(unlabeled_loader):
-#                 if batch_idx >= args.step_encoder_batches:
-#                     # Unfreeze PINN_PF parameters for subsequent steps
-#                     for param in model.pinn_pf_.parameters():
-#                         param.requires_grad = True
-#                     break
-#                 unlabeled_x = unlabeled_x.to(device)
-#                 # with torch.no_grad():
-#                 pseudo_action = model.encode(unlabeled_x)
-#                 losses = train_step_2(
-#                     model, pseudo_action, unlabeled_x, None,
-#                     optimizer, pseudo_epoch, args.pretrain_epochs,
-#                     penalty_coefficient, case,
-#                     args.w_cost, args.w_active, args.w_reactive,
-#                     args.w_voltage, args.w_line
-#                 )
-#                 total_loss  += losses[0].item()
-#                 batch_count += 1
+        # ---- Step 2: encoder constraints on unlabeled subset ----
+        if unlabeled_loader is not None:
+            # Freeze PINN_PF parameters so only encoder gets updated
+            for param in model.pinn_pf_.parameters():
+                param.requires_grad = False
+            for batch_idx, (unlabeled_x,) in enumerate(unlabeled_loader):
+                if batch_idx >= args.step_encoder_batches:
+                    # Unfreeze PINN_PF parameters for subsequent steps
+                    for param in model.pinn_pf_.parameters():
+                        param.requires_grad = True
+                    break
+                unlabeled_x = unlabeled_x.to(device)
+                # with torch.no_grad():
+                pseudo_action = model.encode(unlabeled_x)
+                losses = train_step_2(
+                    model, pseudo_action, unlabeled_x, None,
+                    optimizer, pseudo_epoch, args.pretrain_epochs,
+                    penalty_coefficient, case,
+                    args.w_cost, args.w_active, args.w_reactive,
+                    args.w_voltage, args.w_line
+                )
+                total_loss  += losses[0].item()
+                batch_count += 1
 
 
-#         avg_loss = total_loss / batch_count if batch_count > 0 else 0
+        avg_loss = total_loss / batch_count if batch_count > 0 else 0
 
-#         # Intermediate validation on test set
-#         if epoch % args.validate_every == 0 or epoch == 1:
-#             X_con_test_dev = val_tensor.to(device)
-#             p_error, q_error = validate_model(
-#                 model, case, X_con_test_dev, args.sample_num_for_validate
-#             )
-#             logger.info(
-#                 f'Epoch {epoch}/{args.finetune_epochs} | LR: {new_lr:.2e} | Loss: {avg_loss:.6f} | '
-#                 f'P-err: {p_error:.4f} | Q-err: {q_error:.4f}'
-#             )
-#             if p_error < best_p_error:
-#                 best_p_error = p_error
-#             tqdm_e.set_description(
-#                 f'Fine-tuning | Loss: {avg_loss:.4f} | '
-#                 f'P-err: {p_error:.4f} | Best-P: {best_p_error:.4f}'
-#             )
-#             tqdm_e.set_postfix({'LR': f'{new_lr:.2e}'})
-#         else:
-#             tqdm_e.set_description(f'Fine-tuning | Loss: {avg_loss:.4f}')
-#             tqdm_e.set_postfix({'LR': f'{new_lr:.2e}'})
+        # Intermediate validation on test set
+        if epoch % args.validate_every == 0 or epoch == 1:
+            X_con_test_dev = val_tensor.to(device)
+            p_error, q_error = validate_model(
+                model, case, X_con_test_dev, args.sample_num_for_validate
+            )
+            logger.info(
+                f'Epoch {epoch}/{args.finetune_epochs} | LR: {new_lr:.2e} | Loss: {avg_loss:.6f} | '
+                f'P-err: {p_error:.4f} | Q-err: {q_error:.4f}'
+            )
+            if p_error < best_p_error:
+                best_p_error = p_error
+            tqdm_e.set_description(
+                f'Fine-tuning | Loss: {avg_loss:.4f} | '
+                f'P-err: {p_error:.4f} | Best-P: {best_p_error:.4f}'
+            )
+            tqdm_e.set_postfix({'LR': f'{new_lr:.2e}'})
+        else:
+            tqdm_e.set_description(f'Fine-tuning | Loss: {avg_loss:.4f}')
+            tqdm_e.set_postfix({'LR': f'{new_lr:.2e}'})
 
-#     logger.info(f"Fine-tuning completed. Best P error: {best_p_error:.6f}")
+    logger.info(f"Fine-tuning completed. Best P error: {best_p_error:.6f}")
 
-#     return model
+    return model
 
 def finetune_model(model, finetune_data, args, device, case, logger):
     """Fine-tune model using a mix of labeled (supervised) and unlabeled (physics) data.
@@ -828,36 +828,6 @@ def main():
         model.load_state_dict(checkpoint['model'])
     
     all_results = []
-
-
-    # keys = ['p', 'q', 'cost', 'active', 'reactive', 'voltage', 'line']
-    # acc  = {k: 0.0 for k in keys}
-    # acc_baseline = {k: 0.0 for k in keys}
-    # for scenario_name, data in data['load_variation'].items():
-    #     X_con_np  = data['test_labeled']['X_con']   # (N, 2708) states
-    #     X_in_np   = data['test_labeled']['X_in']    # (N, 520)  actions (ground truth)
-    #     X_other_np = data['test_labeled']['X_other'] # (N, 2708) q|u|delta ground truth
-    #     print(X_con_np.min(), " ", X_con_np.max())
-    #     print(X_in_np.min(), " ", X_in_np.max())
-    #     print(X_other_np.min(), " ", X_other_np.max())
-
-    #     num_samples = X_con_np.shape[0]
-    #     for i in range(num_samples):
-    #         # ---- Baseline: ground truth values ----
-    #         p_err, q_err, cost, active, reactive, voltage, line = \
-    #             AC_optimal_power_flow_equations_evaluation(
-    #                 case, X_con_np[i], X_in_np[i],
-    #                 X_other_np[i, :260],
-    #                 X_other_np[i, 260:1354],
-    #                 X_other_np[i, 1354:])
-    #         acc_baseline['p']        += np.sqrt(p_err)
-    #         acc_baseline['q']        += np.sqrt(q_err)
-    #         acc_baseline['cost']     += cost
-    #         acc_baseline['active']   += active
-    #         acc_baseline['reactive'] += reactive
-    #         acc_baseline['voltage']  += voltage
-    #         acc_baseline['line']     += line
-    #     print(acc_baseline['p']/num_samples, "  ", acc_baseline['q']/num_samples)
 
     if not args.skip_load_variation:
         load_results = run_load_variation_experiments(model, data, args, device, case, logger)
