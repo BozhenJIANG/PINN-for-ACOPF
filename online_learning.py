@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Online Learning Framework for ACOPF with Data Shift.
-For small load distribution and topology change scenarios
+For load distribution and topology change scenarios
 
 This script implements:
 1. Pre-training on labeled data
