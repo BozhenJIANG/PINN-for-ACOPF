@@ -1,4 +1,3 @@
-# This file was automatically generated from case24.txt
 # Do not modify manually
 
 from numpy import array
